@@ -76,7 +76,7 @@ export default class LibAVWrapper {
         return [...extensions][0];
     }
 
-    async render({ blob, output, args }: RenderParams) {
+    async remux({ blob, output, args }: RenderParams) {
         if (!this.libav) throw new Error("LibAV wasn't initialized");
         const libav = await this.libav;
         const inputKind = blob.type.split("/")[0];
