@@ -118,6 +118,9 @@ importers:
       ts-deepmerge:
         specifier: ^7.0.0
         version: 7.0.1
+      yocto-queue:
+        specifier: ^1.1.1
+        version: 1.1.1
     devDependencies:
       '@eslint/js':
         specifier: ^9.5.0
@@ -2291,6 +2294,10 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  yocto-queue@1.1.1:
+    resolution: {integrity: sha512-b4JR1PFR10y1mKjhHY9LaGo6tmrgjit7hxVIeAmyMw3jegXR4dhYqLaQF5zMXZxY7tLpMyJeLjr1C4rLmkVe8g==}
+    engines: {node: '>=12.20'}
+
   youtubei.js@10.3.0:
     resolution: {integrity: sha512-tLmeJCECK2xF2hZZtF2nEqirdKVNLFSDpa0LhTaXY3tngtL7doQXyy7M2CLueramDTlmCnFaW+rctHirTPFaRQ==}
 
@@ -4206,6 +4213,8 @@ snapshots:
   wrappy@1.0.2: {}
 
   yocto-queue@0.1.0: {}
+
+  yocto-queue@1.1.1: {}
 
   youtubei.js@10.3.0:
     dependencies:

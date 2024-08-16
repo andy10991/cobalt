@@ -1,3 +1,5 @@
+import { BufferStream } from "$lib/buffer-stream";
+
 export type InputFileKind = "video" | "audio";
 
 export type FileInfo = {
@@ -26,3 +28,39 @@ export type FFmpegProgressEvent = {
 }
 
 export type FFmpegProgressCallback = (info: FFmpegProgressEvent) => void;
+export type Decoder = VideoDecoder | AudioDecoder;
+export type Encoder = VideoEncoder | AudioEncoder;
+
+export type ChunkMetadata = EncodedVideoChunkMetadata | EncodedAudioChunkMetadata;
+export type Chunk = EncodedVideoChunk | EncodedAudioChunk;
+
+export type AudioPipeline = {
+    decoder: {
+        instance: AudioDecoder,
+        output: BufferStream<AudioData>
+    },
+    encoder: {
+        instance: AudioEncoder,
+        output: BufferStream<{
+            chunk: EncodedAudioChunk,
+            metadata: EncodedAudioChunkMetadata
+        }>
+    }
+};
+
+export type VideoPipeline = {
+    decoder: {
+        instance: VideoDecoder,
+        output: BufferStream<VideoFrame>
+    },
+    encoder: {
+        instance: VideoEncoder,
+        output: BufferStream<{
+            chunk: EncodedVideoChunk,
+            metadata: EncodedVideoChunkMetadata
+        }>
+    }
+}
+
+export type RenderingPipeline = AudioPipeline | VideoPipeline;
+export type OutputStream = [number, number, number];
