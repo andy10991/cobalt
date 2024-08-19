@@ -29,7 +29,6 @@
             acceptExtensions={[
                 "mp4",
                 "webm",
-                "png",
                 "mp3",
                 "ogg",
                 "opus",
