@@ -112,9 +112,6 @@ importers:
       libavjs-webcodecs-bridge:
         specifier: ^0.1.0
         version: 0.1.0
-      libavjs-webcodecs-polyfill:
-        specifier: link:/home/j/libavjs-webcodecs-polyfill
-        version: link:../../libavjs-webcodecs-polyfill
       mime:
         specifier: ^4.0.4
         version: 4.0.4
