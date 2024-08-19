@@ -1,20 +1,23 @@
 import mime from "mime";
 import LibAV, { type LibAV as LibAVInstance, type Packet, type Stream } from "@imput/libav.js-encode-cli";
-import type { Chunk, ChunkMetadata, Decoder, FFmpegProgressCallback, FFmpegProgressEvent, FFmpegProgressStatus, FileInfo, OutputStream, RenderingPipeline, RenderParams } from "./types/libav";
+import type { Chunk, ChunkMetadata, Decoder, FFmpegProgressCallback, FFmpegProgressEvent, FFmpegProgressStatus, FileInfo, OutputStream, RenderingPipeline, RenderParams } from "../types/libav";
 import type { FfprobeData } from "fluent-ffmpeg";
 import * as LibAVWebCodecs from "libavjs-webcodecs-bridge";
-import { BufferStream } from "./buffer-stream";
+import { BufferStream } from "../buffer-stream";
+import WebCodecsWrapper from "./webcodecs";
 
 const QUEUE_THRESHOLD_MIN = 16;
 const QUEUE_THRESHOLD_MAX = 128;
 
 export default class LibAVWrapper {
     libav: Promise<LibAVInstance> | null;
+    webcodecs: WebCodecsWrapper | null;
     concurrency: number;
     onProgress?: FFmpegProgressCallback;
 
     constructor(onProgress?: FFmpegProgressCallback) {
         this.libav = null;
+        this.webcodecs = null;
         this.concurrency = Math.min(4, navigator.hardwareConcurrency);
         this.onProgress = onProgress;
     }
@@ -25,16 +28,23 @@ export default class LibAVWrapper {
                 yesthreads: true,
                 base: '/_libav'
             });
+
+            this.webcodecs = new WebCodecsWrapper(await this.libav);
         }
     }
 
     async #get() {
         if (!this.libav) throw new Error("LibAV wasn't initialized");
-        return await this.libav;
+        if (!this.webcodecs) throw new Error("unreachable");
+
+        return {
+            libav: await this.libav,
+            webcodecs: this.webcodecs
+        };
     }
 
     async probe(blob: Blob) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
 
         const OUT_FILE = 'output.json';
         await libav.mkreadaheadfile('input', blob);
@@ -86,7 +96,7 @@ export default class LibAVWrapper {
     }
 
     async remux({ blob, output, args }: RenderParams) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
 
         const inputKind = blob.type.split("/")[0];
         const inputExtension = LibAVWrapper.getExtensionFromType(blob);
@@ -165,7 +175,7 @@ export default class LibAVWrapper {
     }
 
     async transcode(blob: Blob) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
         let fmtctx;
 
         await libav.mkreadaheadfile('input', blob);
@@ -281,7 +291,7 @@ export default class LibAVWrapper {
     }
 
     async #processChunk({ chunk, metadata }: { chunk: Chunk, metadata: ChunkMetadata }, ostream: OutputStream, index: number) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
 
         let convertToPacket;
         if (chunk instanceof EncodedVideoChunk) {
@@ -294,7 +304,7 @@ export default class LibAVWrapper {
     }
 
     async #mux(pipes: RenderingPipeline[], ostreams: OutputStream[]) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
         const write_pkt = await libav.av_packet_alloc();
 
         let writer_ctx = 0, output_ctx = 0;
@@ -385,7 +395,7 @@ export default class LibAVWrapper {
     }
 
     async* #demux(fmt_ctx: number) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
         const read_pkt = await libav.av_packet_alloc();
 
         try {
@@ -413,7 +423,7 @@ export default class LibAVWrapper {
     }
 
     async #createEncoder(stream: Stream, codec: string) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
 
         let streamToConfig, configToStream, Encoder;
 
@@ -473,16 +483,16 @@ export default class LibAVWrapper {
     }
 
     async #createDecoder(stream: Stream) {
-        const libav = await this.#get();
+        const { libav } = await this.#get();
 
-        let streamToConfig, Decoder;
+        let streamToConfig, initDecoder;
 
         if (stream.codec_type === libav.AVMEDIA_TYPE_VIDEO) {
             streamToConfig = LibAVWebCodecs.videoStreamToConfig;
-            Decoder = VideoDecoder;
+            initDecoder = this.webcodecs.initVideoDecoder;
         } else if (stream.codec_type === libav.AVMEDIA_TYPE_AUDIO) {
             streamToConfig = LibAVWebCodecs.audioStreamToConfig;
-            Decoder = AudioDecoder;
+            initDecoder = this.webcodecs.initAudioDecoder;
         } else throw "Unknown type: " + stream.codec_type;
 
         const config = await streamToConfig(libav, stream);
