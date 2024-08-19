@@ -51,6 +51,7 @@
         "@fontsource/ibm-plex-mono": "^5.0.13",
         "@imput/libav.js-encode-cli": "^5.7.6",
         "@imput/libav.js-remux-cli": "^5.7.6",
+        "@imput/libavjs-webcodecs-polyfill": "^0.5.1",
         "@imput/version-info": "workspace:^",
         "@tabler/icons-svelte": "3.6.0",
         "@vitejs/plugin-basic-ssl": "^1.1.0",

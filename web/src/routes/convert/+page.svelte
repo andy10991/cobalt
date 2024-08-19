@@ -1,5 +1,5 @@
 <script lang="ts">
-    import LibAVWrapper from "$lib/libav";
+    import LibAVWrapper from "$lib/libav/encode";
     import { t } from "$lib/i18n/translations";
 
     import DropReceiver from "$components/misc/DropReceiver.svelte";

@@ -62,5 +62,6 @@ export type VideoPipeline = {
     }
 }
 
-export type RenderingPipeline = AudioPipeline | VideoPipeline;
-export type OutputStream = [number, number, number];
+export type Pipeline = AudioPipeline | VideoPipeline;
+export type RenderingPipeline = Pipeline | null;
+export type OutputStream = [number, number, number] | null;

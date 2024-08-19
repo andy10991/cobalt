@@ -97,6 +97,9 @@ importers:
       '@imput/libav.js-remux-cli':
         specifier: ^5.7.6
         version: 5.7.6
+      '@imput/libavjs-webcodecs-polyfill':
+        specifier: ^0.5.1
+        version: 0.5.1
       '@imput/version-info':
         specifier: workspace:^
         version: link:../packages/version-info
@@ -109,6 +112,9 @@ importers:
       libavjs-webcodecs-bridge:
         specifier: ^0.1.0
         version: 0.1.0
+      libavjs-webcodecs-polyfill:
+        specifier: link:/home/j/libavjs-webcodecs-polyfill
+        version: link:../../libavjs-webcodecs-polyfill
       mime:
         specifier: ^4.0.4
         version: 4.0.4
@@ -541,6 +547,9 @@ packages:
   '@imput/libav.js-remux-cli@5.7.6':
     resolution: {integrity: sha512-ofSSLjRF9RfZ3QMBlb7fhxso8p8xlDqU4qX8eCJCukCB15g7iBShthCyGVnYz+3lLoFu9klbvVal9bEncBj/FQ==}
 
+  '@imput/libavjs-webcodecs-polyfill@0.5.1':
+    resolution: {integrity: sha512-uQ5vawG/4ppLKDumkg8BjnvqKWzoKXxt7cj0lvTpB9ph1hiuzjNx8wmwMcXbeTVAzRcts+GtCTPpSF9rFosYBg==}
+
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
@@ -794,6 +803,9 @@ packages:
   '@typescript-eslint/visitor-keys@7.18.0':
     resolution: {integrity: sha512-cDF0/Gf81QpY3xYyJKDV14Zwdmid5+uuENhjH2EqFaF0ni+yAyq/LzMaIJdhNJXZI7uLzwIlA+V7oWoyn6Curg==}
     engines: {node: ^18.18.0 || >=20.0.0}
+
+  '@ungap/global-this@0.4.4':
+    resolution: {integrity: sha512-mHkm6FvepJECMNthFuIgpAEFmPOk71UyXuIxYfjytvFTnSDBIz7jmViO+LfHI/AjrazWije0PnSP3+/NlwzqtA==}
 
   '@ungap/structured-clone@1.2.0':
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
@@ -2513,6 +2525,10 @@ snapshots:
 
   '@imput/libav.js-remux-cli@5.7.6': {}
 
+  '@imput/libavjs-webcodecs-polyfill@0.5.1':
+    dependencies:
+      '@ungap/global-this': 0.4.4
+
   '@isaacs/cliui@8.0.2':
     dependencies:
       string-width: 5.1.2
@@ -2771,6 +2787,8 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       eslint-visitor-keys: 3.4.3
+
+  '@ungap/global-this@0.4.4': {}
 
   '@ungap/structured-clone@1.2.0': {}
 

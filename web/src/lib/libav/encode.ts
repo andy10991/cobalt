@@ -1,7 +1,5 @@
-import mime from "mime";
 import LibAV, { type LibAV as LibAVInstance, type Packet, type Stream } from "@imput/libav.js-encode-cli";
-import type { Chunk, ChunkMetadata, Decoder, FFmpegProgressCallback, FFmpegProgressEvent, FFmpegProgressStatus, FileInfo, OutputStream, RenderingPipeline, RenderParams } from "../types/libav";
-import type { FfprobeData } from "fluent-ffmpeg";
+import type { Chunk, ChunkMetadata, Decoder, FFmpegProgressCallback, OutputStream, Pipeline, RenderingPipeline } from "../types/libav";
 import * as LibAVWebCodecs from "libavjs-webcodecs-bridge";
 import { BufferStream } from "../buffer-stream";
 import WebCodecsWrapper from "./webcodecs";
@@ -29,149 +27,22 @@ export default class LibAVWrapper {
                 base: '/_libav'
             });
 
-            this.webcodecs = new WebCodecsWrapper(await this.libav);
+            this.webcodecs = new WebCodecsWrapper(this.libav);
         }
     }
 
     async #get() {
         if (!this.libav) throw new Error("LibAV wasn't initialized");
-        if (!this.webcodecs) throw new Error("unreachable");
+        const libav = await this.libav;
+
+        if (!this.webcodecs) {
+            throw new Error("unreachable");
+        }
 
         return {
-            libav: await this.libav,
+            libav,
             webcodecs: this.webcodecs
         };
-    }
-
-    async probe(blob: Blob) {
-        const { libav } = await this.#get();
-
-        const OUT_FILE = 'output.json';
-        await libav.mkreadaheadfile('input', blob);
-        await libav.mkwriterdev(OUT_FILE);
-
-        let writtenData = new Uint8Array(0);
-
-        libav.onwrite = (name, pos, data) => {
-            if (name !== OUT_FILE) return;
-
-            const newLen = Math.max(pos + data.length, writtenData.length);
-            if (newLen > writtenData.length) {
-                const newData = new Uint8Array(newLen);
-                newData.set(writtenData);
-                writtenData = newData;
-            }
-            writtenData.set(data, pos);
-        };
-
-        await libav.ffprobe([
-            '-v', 'quiet',
-            '-print_format', 'json',
-            '-show_format',
-            '-show_streams',
-            'input',
-            '-o', OUT_FILE
-        ]);
-
-        await libav.unlink(OUT_FILE);
-        await libav.unlinkreadaheadfile('input');
-
-        const copy = new Uint8Array(writtenData);
-        const text = new TextDecoder().decode(copy);
-        return JSON.parse(text) as FfprobeData;
-    }
-
-    static getExtensionFromType(blob: Blob) {
-        const extensions = mime.getAllExtensions(blob.type);
-        const overrides = ['mp3', 'mov'];
-
-        if (!extensions)
-            return;
-
-        for (const override of overrides)
-            if (extensions?.has(override))
-                return override;
-
-        return [...extensions][0];
-    }
-
-    async remux({ blob, output, args }: RenderParams) {
-        const { libav } = await this.#get();
-
-        const inputKind = blob.type.split("/")[0];
-        const inputExtension = LibAVWrapper.getExtensionFromType(blob);
-
-        if (inputKind !== "video" && inputKind !== "audio") return;
-        if (!inputExtension) return;
-
-        const input: FileInfo = {
-            kind: inputKind,
-            extension: inputExtension,
-        }
-
-        if (!output) output = input;
-
-        output.type = mime.getType(output.extension);
-        if (!output.type) return;
-
-        const outputName = `output.${output.extension}`;
-
-        await libav.mkreadaheadfile("input", blob);
-
-        // https://github.com/Yahweasel/libav.js/blob/7d359f69/docs/IO.md#block-writer-devices
-        await libav.mkwriterdev(outputName);
-        await libav.mkwriterdev('progress.txt');
-
-        // since we expect the output file to be roughly the same size
-        // as the original, preallocate its size for the output
-        let writtenData = new Uint8Array(blob.size), actualSize = 0;
-
-        libav.onwrite = (name, pos, data) => {
-            if (name === 'progress.txt') {
-                try {
-                    return this.#emitProgress(data);
-                } catch(e) {
-                    console.error(e);
-                }
-            } else if (name !== outputName) return;
-
-            actualSize = Math.max(pos + data.length, actualSize);
-            const newLen = Math.max(pos + data.length, writtenData.length);
-            if (newLen > writtenData.length) {
-                const newData = new Uint8Array(newLen);
-                newData.set(writtenData);
-                writtenData = newData;
-            }
-            writtenData.set(data, pos);
-        };
-
-        await libav.ffmpeg([
-            '-nostdin', '-y',
-            '-loglevel', 'error',
-            '-progress', 'progress.txt',
-            '-threads', this.concurrency.toString(),
-            '-i', 'input',
-            ...args,
-            outputName
-        ]);
-
-        await libav.unlink(outputName);
-        await libav.unlink('progress.txt');
-        await libav.unlinkreadaheadfile("input");
-
-        // if we didn't need as much space as we allocated for some reason,
-        // shrink the buffer so that we don't inflate the file with zeros
-        if (writtenData.length > actualSize) {
-            writtenData = writtenData.slice(0, actualSize);
-        }
-
-        const renderBlob = new Blob(
-            [ writtenData ],
-            { type: output.type }
-        );
-
-        if (renderBlob.size === 0) return;
-        return renderBlob;
     }
 
     async transcode(blob: Blob) {
@@ -186,6 +57,12 @@ export default class LibAVWrapper {
             const pipes: RenderingPipeline[] = [];
             const output_streams: OutputStream[] = [];
             for (const stream of streams) {
+                if (stream.codec_id === 61) {
+                    pipes.push(null);
+                    output_streams.push(null);
+                    continue;
+                }
+
                 const {
                     pipe,
                     stream: ostream
@@ -216,6 +93,8 @@ export default class LibAVWrapper {
 
     async #decodeStreams(fmt_ctx: number, pipes: RenderingPipeline[], streams: Stream[]) {
         for await (const { index, packet } of this.#demux(fmt_ctx)) {
+            if (pipes[index] === null) continue;
+
             const { decoder } = pipes[index];
 
             this.#decodePacket(decoder.instance, packet, streams[index]);
@@ -234,16 +113,18 @@ export default class LibAVWrapper {
             }
         }
 
-        for (const { decoder } of pipes) {
-            await decoder.instance.flush();
-            decoder.instance.close();
-            decoder.output.push(null);
+        for (const pipe of pipes) {
+            if (pipe !== null) {
+                await pipe.decoder.instance.flush();
+                pipe.decoder.instance.close();
+                pipe.decoder.output.push(null);
+            }
         }
     }
 
     async #encodeStream(
-        frames: RenderingPipeline['decoder']['output'],
-        { instance: encoder, output }: RenderingPipeline['encoder']
+        frames: Pipeline['decoder']['output'],
+        { instance: encoder, output }: Pipeline['encoder']
     ) {
         const reader = frames.getReader();
 
@@ -282,7 +163,9 @@ export default class LibAVWrapper {
 
     async #encodeStreams(pipes: RenderingPipeline[]) {
         return Promise.all(
-            pipes.map(
+            pipes
+            .filter(p => p !== null)
+            .map(
                 ({ decoder, encoder }) => {
                     return this.#encodeStream(decoder.output, encoder);
                 }
@@ -291,6 +174,7 @@ export default class LibAVWrapper {
     }
 
     async #processChunk({ chunk, metadata }: { chunk: Chunk, metadata: ChunkMetadata }, ostream: OutputStream, index: number) {
+        if (ostream === null) return;
         const { libav } = await this.#get();
 
         let convertToPacket;
@@ -313,7 +197,8 @@ export default class LibAVWrapper {
             const starterPackets = [], readers: ReadableStreamDefaultReader[] = [];
 
             for (let i = 0; i < ostreams.length; ++i) {
-                readers[i] = pipes[i].encoder.output.getReader();
+                if (pipes[i] === null) continue;
+                readers[i] = pipes[i]!.encoder.output.getReader();
 
                 const { done, value } = await readers[i].read();
                 if (done) throw "this should not happen";
@@ -343,7 +228,7 @@ export default class LibAVWrapper {
                     device: true,
                     open: true,
                     codecpars: true
-                }, ostreams
+                }, ostreams.filter(a => a !== null)
             );
 
             await libav.avformat_write_header(output_ctx, 0);
@@ -423,18 +308,18 @@ export default class LibAVWrapper {
     }
 
     async #createEncoder(stream: Stream, codec: string) {
-        const { libav } = await this.#get();
+        const { libav, webcodecs } = await this.#get();
 
-        let streamToConfig, configToStream, Encoder;
+        let streamToConfig, configToStream, initEncoder;
 
         if (stream.codec_type === libav.AVMEDIA_TYPE_VIDEO) {
             streamToConfig = LibAVWebCodecs.videoStreamToConfig;
             configToStream = LibAVWebCodecs.configToVideoStream;
-            Encoder = VideoEncoder;
+            initEncoder = webcodecs!.initVideoEncoder.bind(webcodecs);
         } else if (stream.codec_type === libav.AVMEDIA_TYPE_AUDIO) {
             streamToConfig = LibAVWebCodecs.audioStreamToConfig;
             configToStream = LibAVWebCodecs.configToAudioStream;
-            Encoder = AudioEncoder;
+            initEncoder = webcodecs.initAudioEncoder.bind(webcodecs);
             codec = 'mp4a.40.29';
         } else throw "Unknown type: " + stream.codec_type;
 
@@ -451,48 +336,41 @@ export default class LibAVWrapper {
             sampleRate: config.sampleRate
         };
 
-        let { supported } = await Encoder.isConfigSupported(encoderConfig);
-        if (!supported) {
-            throw "cannot encode " + codec;
-        }
 
         const output = new BufferStream<
             { chunk: Chunk, metadata: ChunkMetadata }
         >();
 
-        const encoder = new Encoder({
+        const encoder = await initEncoder(encoderConfig, {
             output: (chunk, metadata = {}) => {
                 output.push({ chunk, metadata })
             },
             error: console.error
         });
 
-        encoder.configure(encoderConfig);
+        if (!encoder) {
+            throw "cannot encode " + codec;
+        }
 
-        const c2s = await configToStream(libav, encoderConfig);
-
-        // FIXME: figure out a proper way to handle timescale
-        //        (preferrably without killing self)
-        c2s[1] = 1;
-        c2s[2] = 60000;
+        const encoderStream = await configToStream(libav, encoderConfig);
 
         return {
             pipe: { instance: encoder, output },
-            stream: c2s
+            stream: encoderStream
         };
     }
 
     async #createDecoder(stream: Stream) {
-        const { libav } = await this.#get();
+        const { libav, webcodecs } = await this.#get();
 
         let streamToConfig, initDecoder;
 
         if (stream.codec_type === libav.AVMEDIA_TYPE_VIDEO) {
             streamToConfig = LibAVWebCodecs.videoStreamToConfig;
-            initDecoder = this.webcodecs.initVideoDecoder;
+            initDecoder = webcodecs.initVideoDecoder.bind(webcodecs);
         } else if (stream.codec_type === libav.AVMEDIA_TYPE_AUDIO) {
             streamToConfig = LibAVWebCodecs.audioStreamToConfig;
-            initDecoder = this.webcodecs.initAudioDecoder;
+            initDecoder = webcodecs.initAudioDecoder.bind(webcodecs);
         } else throw "Unknown type: " + stream.codec_type;
 
         const config = await streamToConfig(libav, stream);
@@ -501,65 +379,16 @@ export default class LibAVWrapper {
             throw "could not make decoder config";
         }
 
-        let { supported } = await Decoder.isConfigSupported(config);
-        if (!supported) {
-            throw "cannot decode " + config.codec;
-        }
-
         const output = new BufferStream<VideoFrame | AudioData>();
-        const decoder = new Decoder({
+        const decoder = await initDecoder(config, {
             output: frame => output.push(frame),
             error: console.error
         });
 
-        decoder.configure(config);
-        return { instance: decoder, output }
-    }
-
-    #emitProgress(data: Uint8Array | Int8Array) {
-        if (!this.onProgress) return;
-
-        const copy = new Uint8Array(data);
-        const text = new TextDecoder().decode(copy);
-        const entries = Object.fromEntries(
-            text.split('\n')
-                .filter(a => a)
-                .map(a => a.split('=', ))
-        );
-
-        const status: FFmpegProgressStatus = (() => {
-            const { progress } = entries;
-
-            if (progress === 'continue' || progress === 'end') {
-                return progress;
-            }
-
-            return "unknown";
-        })();
-
-        const tryNumber = (str: string, transform?: (n: number) => number) => {
-            if (str) {
-                const num = Number(str);
-                if (!isNaN(num)) {
-                    if (transform)
-                        return transform(num);
-                    else
-                        return num;
-                }
-            }
+        if (!decoder) {
+            throw "cannot decode " + config.codec;
         }
 
-        const progress: FFmpegProgressEvent = {
-            status,
-            frame: tryNumber(entries.frame),
-            fps: tryNumber(entries.fps),
-            total_size: tryNumber(entries.total_size),
-            dup_frames: tryNumber(entries.dup_frames),
-            drop_frames: tryNumber(entries.drop_frames),
-            speed: tryNumber(entries.speed?.trim()?.replace('x', '')),
-            out_time_sec: tryNumber(entries.out_time_us, n => Math.floor(n / 1e6))
-        };
-
-        this.onProgress(progress);
+        return { instance: decoder, output }
     }
 }

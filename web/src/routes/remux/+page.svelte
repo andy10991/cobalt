@@ -1,5 +1,5 @@
 <script lang="ts">
-    import LibAVWrapper from "$lib/libav";
+    import LibAVWrapper from "$lib/libav/remux";
     import { openURL } from "$lib/download";
     import { t } from "$lib/i18n/translations";
 
