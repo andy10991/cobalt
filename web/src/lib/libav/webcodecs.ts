@@ -7,7 +7,7 @@ const has = <T extends object>(obj: T, key: string) => {
 
 export default class WebCodecsWrapper {
     #libav: Promise<LibAV>;
-    #ready: Promise<void> | undefined;
+    #ready?: Promise<void>;
 
     constructor(libav: Promise<LibAV>) {
         this.#libav = libav;
@@ -17,7 +17,7 @@ export default class WebCodecsWrapper {
         if (typeof this.#ready === 'undefined') {
             this.#ready = LibAVPolyfill.load({
                 polyfill: false,
-                LibAV: await this.#libav
+                LibAV: { LibAV: () => this.#libav }
             });
         }
 
