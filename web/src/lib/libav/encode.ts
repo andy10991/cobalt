@@ -313,7 +313,7 @@ export default class EncodeLibAV extends LibAVWrapper {
             codec = 'mp4a.40.29';
         } else throw "Unknown type: " + stream.codec_type;
 
-        const config = await streamToConfig(libav, stream);
+        const config = await streamToConfig(libav, stream, true);
         if (config === null) {
             throw "could not make encoder config";
         }
@@ -363,7 +363,7 @@ export default class EncodeLibAV extends LibAVWrapper {
             initDecoder = webcodecs.initAudioDecoder.bind(webcodecs);
         } else throw "Unknown type: " + stream.codec_type;
 
-        const config = await streamToConfig(libav, stream);
+        const config = await streamToConfig(libav, stream, true);
 
         if (config === null) {
             throw "could not make decoder config";
