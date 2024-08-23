@@ -97,9 +97,12 @@ importers:
       '@imput/libav.js-remux-cli':
         specifier: ^5.7.6
         version: 5.7.6
+      '@imput/libavjs-webcodecs-bridge':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@imput/libavjs-webcodecs-polyfill':
-        specifier: ^0.5.1
-        version: 0.5.1
+        specifier: ^0.5.2
+        version: 0.5.2
       '@imput/version-info':
         specifier: workspace:^
         version: link:../packages/version-info
@@ -109,9 +112,6 @@ importers:
       '@vitejs/plugin-basic-ssl':
         specifier: ^1.1.0
         version: 1.1.0(vite@5.3.5(@types/node@20.14.14))
-      libavjs-webcodecs-bridge:
-        specifier: ^0.1.0
-        version: 0.1.0
       mime:
         specifier: ^4.0.4
         version: 4.0.4
@@ -544,8 +544,11 @@ packages:
   '@imput/libav.js-remux-cli@5.7.6':
     resolution: {integrity: sha512-ofSSLjRF9RfZ3QMBlb7fhxso8p8xlDqU4qX8eCJCukCB15g7iBShthCyGVnYz+3lLoFu9klbvVal9bEncBj/FQ==}
 
-  '@imput/libavjs-webcodecs-polyfill@0.5.1':
-    resolution: {integrity: sha512-uQ5vawG/4ppLKDumkg8BjnvqKWzoKXxt7cj0lvTpB9ph1hiuzjNx8wmwMcXbeTVAzRcts+GtCTPpSF9rFosYBg==}
+  '@imput/libavjs-webcodecs-bridge@0.1.2':
+    resolution: {integrity: sha512-8QVvCe9CRe3oVGpMrx/RtHmPunrK+I52nUImM/FDbOt13nEq0rd+zu5ADIMOw7rq/8OgLqqf/o1yQ+Sa4/mhSw==}
+
+  '@imput/libavjs-webcodecs-polyfill@0.5.2':
+    resolution: {integrity: sha512-3wyRFUTV7yJyYNJvSKzoZWNnGbSN/5RVj+Xx9vYH8/xt73TLpXBBqotGc7UiHNeSy6eFO0EjUzAmieBa+YjLrQ==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -1541,9 +1544,6 @@ packages:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
 
-  libavjs-webcodecs-bridge@0.1.0:
-    resolution: {integrity: sha512-K9pGvW+k2sGnbaCEuhbLG6ylzKoQyVAA1WxO+qIzaYEeVumosaFeKtMzVAThcIy6VHo11rGVF6IqLfSEEQL7sg==}
-
   lilconfig@3.1.2:
     resolution: {integrity: sha512-eop+wDAvpItUys0FWkHIKeC9ybYrTGbU41U5K7+bttZZeohvnY7M9dZ5kB21GNWiFT2q1OoPTvncPCgSOVO5ow==}
     engines: {node: '>=14'}
@@ -2522,7 +2522,9 @@ snapshots:
 
   '@imput/libav.js-remux-cli@5.7.6': {}
 
-  '@imput/libavjs-webcodecs-polyfill@0.5.1':
+  '@imput/libavjs-webcodecs-bridge@0.1.2': {}
+
+  '@imput/libavjs-webcodecs-polyfill@0.5.2':
     dependencies:
       '@ungap/global-this': 0.4.4
 
@@ -3571,8 +3573,6 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
-
-  libavjs-webcodecs-bridge@0.1.0: {}
 
   lilconfig@3.1.2: {}
 

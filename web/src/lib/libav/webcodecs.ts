@@ -16,31 +16,46 @@ export default class WebCodecsWrapper {
     async #load() {
         if (typeof this.#ready === 'undefined') {
             this.#ready = LibAVPolyfill.load({
-                polyfill: false,
+                polyfill: true,
                 LibAV: { LibAV: () => this.#libav }
             });
         }
 
         await this.#ready;
     }
+
+    // FIXME: save me generics. generics save me
     async #getDecoder(config: VideoDecoderConfig | AudioDecoderConfig) {
         if (has(config, 'numberOfChannels') && has(config, 'sampleRate')) {
             const audioConfig = config as AudioDecoderConfig;
+            for (const source of [ window, LibAVPolyfill ]) {
+                if (source === LibAVPolyfill) {
+                    await this.#load();
+                }
 
-            if ('AudioDecoder' in window && await window.AudioDecoder.isConfigSupported(audioConfig))
-                return window.AudioDecoder;
-
-            await this.#load();
-            if (await LibAVPolyfill.AudioDecoder.isConfigSupported(audioConfig))
-                return LibAVPolyfill.AudioDecoder;
+                try {
+                    const { supported } = await source.AudioDecoder.isConfigSupported(audioConfig);
+                    if (supported) return source.AudioDecoder;
+                } catch(e) {
+                    console.error('AudioDecoder missing or does not support', config);
+                    console.error(e);
+                }
+            }
         } else {
             const videoConfig = config as VideoDecoderConfig;
-            if ('VideoDecoder' in window && await window.VideoDecoder.isConfigSupported(videoConfig))
-                return window.VideoDecoder;
+            for (const source of [ window, LibAVPolyfill ]) {
+                if (source === LibAVPolyfill) {
+                    await this.#load();
+                }
 
-            await this.#load();
-            if (await LibAVPolyfill.VideoDecoder.isConfigSupported(videoConfig))
-                return LibAVPolyfill.VideoDecoder;
+                try {
+                    const { supported } = await source.VideoDecoder.isConfigSupported(videoConfig);
+                    if (supported) return source.VideoDecoder;
+                } catch(e) {
+                    console.error('VideoDecoder missing or does not support', config);
+                    console.error(e);
+                }
+            }
         }
 
         return null;
@@ -49,20 +64,34 @@ export default class WebCodecsWrapper {
     async #getEncoder(config: VideoEncoderConfig | AudioEncoderConfig) {
         if (has(config, 'numberOfChannels') && has(config, 'sampleRate')) {
             const audioConfig = config as AudioEncoderConfig;
-            if ('AudioEncoder' in window && await window.AudioEncoder.isConfigSupported(audioConfig))
-                return window.AudioEncoder;
+            for (const source of [ window, LibAVPolyfill ]) {
+                if (source === LibAVPolyfill) {
+                    await this.#load();
+                }
 
-            await this.#load();
-            if (await LibAVPolyfill.AudioEncoder.isConfigSupported(audioConfig))
-                return LibAVPolyfill.AudioEncoder;
+                try {
+                    const { supported } = await source.AudioEncoder.isConfigSupported(audioConfig);
+                    if (supported) return source.AudioEncoder;
+                } catch(e) {
+                    console.error('AudioEncoder missing or does not support', config);
+                    console.error(e);
+                }
+            }
         } else if (has(config, 'width') && has(config, 'height')) {
             const videoConfig = config as VideoEncoderConfig;
-            if ('VideoEncoder' in window && await window.VideoEncoder.isConfigSupported(videoConfig))
-                return window.VideoEncoder;
+            for (const source of [ window, LibAVPolyfill ]) {
+                if (source === LibAVPolyfill) {
+                    await this.#load();
+                }
 
-            await this.#load();
-            if (await LibAVPolyfill.VideoEncoder.isConfigSupported(videoConfig))
-                return LibAVPolyfill.VideoEncoder;
+                try {
+                    const { supported } = await source.VideoEncoder.isConfigSupported(videoConfig);
+                    if (supported) return source.VideoEncoder;
+                } catch(e) {
+                    console.error('VideoEncoder missing or does not support', config);
+                    console.error(e);
+                }
+            }
         } else throw new Error("unreachable");
 
         return null;

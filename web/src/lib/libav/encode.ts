@@ -1,6 +1,6 @@
-import LibAV, { type LibAV as LibAVInstance, type Packet, type Stream } from "@imput/libav.js-encode-cli";
-import type { Chunk, ChunkMetadata, Decoder, FFmpegProgressCallback, OutputStream, Pipeline, RenderingPipeline } from "../types/libav";
-import * as LibAVWebCodecs from "libavjs-webcodecs-bridge";
+import LibAV, { type Packet, type Stream } from "@imput/libav.js-encode-cli";
+import type { Chunk, ChunkMetadata, Decoder, OutputStream, Pipeline, RenderingPipeline } from "../types/libav";
+import * as LibAVWebCodecs from "@imput/libavjs-webcodecs-bridge";
 import { BufferStream } from "../buffer-stream";
 import WebCodecsWrapper from "./webcodecs";
 import LibAVWrapper from "./instance";
@@ -43,7 +43,8 @@ export default class EncodeLibAV extends LibAVWrapper {
             const pipes: RenderingPipeline[] = [];
             const output_streams: OutputStream[] = [];
             for (const stream of streams) {
-                if (stream.codec_id === 61) {
+                // FIXME: support images.
+                if (stream.codec_id === 61 || stream.codec_id === 62) {
                     pipes.push(null);
                     output_streams.push(null);
                     continue;
@@ -52,7 +53,7 @@ export default class EncodeLibAV extends LibAVWrapper {
                 const {
                     pipe,
                     stream: ostream
-                } = await this.#createEncoder(stream, 'avc1.64083e');
+                } = await this.#createEncoder(stream, 'mp3');
 
                 pipes.push({
                     decoder: await this.#createDecoder(stream),
@@ -311,12 +312,11 @@ export default class EncodeLibAV extends LibAVWrapper {
         if (stream.codec_type === libav.AVMEDIA_TYPE_VIDEO) {
             streamToConfig = LibAVWebCodecs.videoStreamToConfig;
             configToStream = LibAVWebCodecs.configToVideoStream;
-            initEncoder = webcodecs!.initVideoEncoder.bind(webcodecs);
+            initEncoder = webcodecs.initVideoEncoder.bind(webcodecs);
         } else if (stream.codec_type === libav.AVMEDIA_TYPE_AUDIO) {
             streamToConfig = LibAVWebCodecs.audioStreamToConfig;
             configToStream = LibAVWebCodecs.configToAudioStream;
             initEncoder = webcodecs.initAudioEncoder.bind(webcodecs);
-            codec = 'mp4a.40.29';
         } else throw "Unknown type: " + stream.codec_type;
 
         const config = await streamToConfig(libav, stream, true);
