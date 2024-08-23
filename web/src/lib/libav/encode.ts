@@ -221,7 +221,11 @@ export default class EncodeLibAV extends LibAVWrapper {
             await libav.ff_write_multi(output_ctx, write_pkt, starterPackets);
 
             let writePromise = Promise.resolve();
-            await Promise.all(pipes.map(async (_, i) => {
+            await Promise.all(pipes.map(async (pipe, i) => {
+                if (pipe === null) {
+                    return;
+                }
+
                 while (true) {
                     const { done, value } = await readers[i].read();
                     if (done) break;
