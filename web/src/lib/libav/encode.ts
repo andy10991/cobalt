@@ -3,45 +3,31 @@ import type { Chunk, ChunkMetadata, Decoder, FFmpegProgressCallback, OutputStrea
 import * as LibAVWebCodecs from "libavjs-webcodecs-bridge";
 import { BufferStream } from "../buffer-stream";
 import WebCodecsWrapper from "./webcodecs";
+import LibAVWrapper from "./instance";
 
 const QUEUE_THRESHOLD_MIN = 16;
 const QUEUE_THRESHOLD_MAX = 128;
 
-export default class LibAVWrapper {
-    libav: Promise<LibAVInstance> | null;
-    webcodecs: WebCodecsWrapper | null;
-    concurrency: number;
-    onProgress?: FFmpegProgressCallback;
+export default class EncodeLibAV extends LibAVWrapper {
+    webcodecs: WebCodecsWrapper | null = null;
 
-    constructor(onProgress?: FFmpegProgressCallback) {
-        this.libav = null;
-        this.webcodecs = null;
-        this.concurrency = Math.min(4, navigator.hardwareConcurrency);
-        this.onProgress = onProgress;
+    constructor() {
+        super(LibAV);
     }
 
     async init() {
-        if (!this.libav) {
-            this.libav = LibAV.LibAV({
-                yesthreads: true,
-                base: '/_libav'
-            });
-
-            this.webcodecs = new WebCodecsWrapper(this.libav);
+        await super.init();
+        if (!this.webcodecs) {
+            this.webcodecs = new WebCodecsWrapper(
+                super.get().then(({ libav }) => libav)
+            );
         }
     }
 
     async #get() {
-        if (!this.libav) throw new Error("LibAV wasn't initialized");
-        const libav = await this.libav;
-
-        if (!this.webcodecs) {
-            throw new Error("unreachable");
-        }
-
         return {
-            libav,
-            webcodecs: this.webcodecs
+            ...await super.get(),
+            webcodecs: this.webcodecs!
         };
     }
 

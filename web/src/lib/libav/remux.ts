@@ -1,38 +1,19 @@
 import mime from "mime";
-import LibAV, { type LibAV as LibAVInstance } from "@imput/libav.js-remux-cli";
+import LibAV from "@imput/libav.js-remux-cli";
 import type { FFmpegProgressCallback, FFmpegProgressEvent, FFmpegProgressStatus, FileInfo, RenderParams } from "../types/libav";
 import type { FfprobeData } from "fluent-ffmpeg";
+import LibAVWrapper from "./instance";
 
-export default class LibAVWrapper {
-    libav: Promise<LibAVInstance> | null;
-    concurrency: number;
+export default class RemuxLibAV extends LibAVWrapper {
     onProgress?: FFmpegProgressCallback;
 
     constructor(onProgress?: FFmpegProgressCallback) {
-        this.libav = null;
-        this.concurrency = Math.min(4, navigator.hardwareConcurrency);
+        super(LibAV);
         this.onProgress = onProgress;
     }
 
-    async init() {
-        if (!this.libav) {
-            this.libav = LibAV.LibAV({
-                yesthreads: true,
-                base: '/_libav'
-            });
-        }
-    }
-
-    async #get() {
-        if (!this.libav) throw new Error("LibAV wasn't initialized");
-
-        return {
-            libav: await this.libav
-        };
-    }
-
     async probe(blob: Blob) {
-        const { libav } = await this.#get();
+        const { libav } = await this.get();
 
         const OUT_FILE = 'output.json';
         await libav.mkreadaheadfile('input', blob);
@@ -69,22 +50,8 @@ export default class LibAVWrapper {
         return JSON.parse(text) as FfprobeData;
     }
 
-    static getExtensionFromType(blob: Blob) {
-        const extensions = mime.getAllExtensions(blob.type);
-        const overrides = ['mp3', 'mov'];
-
-        if (!extensions)
-            return;
-
-        for (const override of overrides)
-            if (extensions?.has(override))
-                return override;
-
-        return [...extensions][0];
-    }
-
     async remux({ blob, output, args }: RenderParams) {
-        const { libav } = await this.#get();
+        const { libav } = await this.get();
 
         const inputKind = blob.type.split("/")[0];
         const inputExtension = LibAVWrapper.getExtensionFromType(blob);
