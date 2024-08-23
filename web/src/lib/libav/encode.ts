@@ -133,10 +133,16 @@ export default class EncodeLibAV extends LibAVWrapper {
             }
 
             // FIXME: figure out how to make typescript happy without this monstrosity
-            if (value instanceof AudioData && encoder instanceof AudioEncoder) {
-                encoder.encode(value);
-            } else if (value instanceof VideoFrame && encoder instanceof VideoEncoder) {
-                encoder.encode(value);
+            if (WebCodecsWrapper.isVideo(encoder)) {
+                WebCodecsWrapper.sendVideo(
+                    value as VideoFrame,
+                    encoder as VideoEncoder
+                );
+            } else {
+                WebCodecsWrapper.sendAudio(
+                    value as AudioData,
+                    encoder as AudioEncoder
+                );
             }
 
             value.close();
@@ -164,7 +170,7 @@ export default class EncodeLibAV extends LibAVWrapper {
         const { libav } = await this.#get();
 
         let convertToPacket;
-        if (chunk instanceof EncodedVideoChunk) {
+        if (WebCodecsWrapper.isVideo(chunk)) {
             convertToPacket = LibAVWebCodecs.encodedVideoChunkToPacket;
         } else {
             convertToPacket = LibAVWebCodecs.encodedAudioChunkToPacket;
@@ -260,9 +266,9 @@ export default class EncodeLibAV extends LibAVWrapper {
 
     #decodePacket(decoder: Decoder, packet: Packet, stream: Stream) {
         let chunk;
-        if (decoder instanceof VideoDecoder) {
+        if (WebCodecsWrapper.isVideo(decoder)) {
             chunk = LibAVWebCodecs.packetToEncodedVideoChunk(packet, stream);
-        } else if (decoder instanceof AudioDecoder) {
+        } else if (WebCodecsWrapper.isAudio(decoder)) {
             chunk = LibAVWebCodecs.packetToEncodedAudioChunk(packet, stream);
         }
 
