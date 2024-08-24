@@ -135,12 +135,13 @@ export default class EncodeLibAV extends LibAVWrapper {
 
             // FIXME: figure out how to make typescript happy without this monstrosity
             if (WebCodecsWrapper.isVideo(encoder)) {
-                WebCodecsWrapper.sendVideo(
+                WebCodecsWrapper.encodeVideo(
                     value as VideoFrame,
                     encoder as VideoEncoder
                 );
             } else {
-                WebCodecsWrapper.sendAudio(
+                console.log(value);
+                WebCodecsWrapper.encodeAudio(
                     value as AudioData,
                     encoder as AudioEncoder
                 );

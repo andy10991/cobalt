@@ -99,7 +99,6 @@ export default class WebCodecsWrapper {
 
     // FIXME: this is nasty, but whatever
     async initAudioEncoder(config: AudioEncoderConfig, init: AudioEncoderInit) {
-        console.log(this);
         const Encoder = await this.#getEncoder(config) as typeof AudioEncoder | null;
         if (Encoder === null) return null;
 
@@ -161,9 +160,12 @@ export default class WebCodecsWrapper {
                 || obj instanceof LibAVPolyfill.EncodedAudioChunk;
     }
 
-    static sendAudio(data: AudioData | LibAVPolyfill.AudioData, destination: AudioEncoder) {
+    static encodeAudio(data: AudioData | LibAVPolyfill.AudioData, destination: AudioEncoder) {
+        const hasAudioData = 'AudioData' in window;
+        const isPolyfilled = hasAudioData && window.AudioData === LibAVPolyfill.AudioData;
+
         if (destination instanceof LibAVPolyfill.AudioEncoder) {
-            if ('AudioData' in window && data instanceof AudioData) {
+            if (hasAudioData && !isPolyfilled && data instanceof AudioData) {
                 const converted = LibAVPolyfill.AudioData.fromNative(data);
                 data.close();
                 data = converted;
@@ -177,9 +179,12 @@ export default class WebCodecsWrapper {
         return destination.encode(data);
     }
 
-    static sendVideo(data: VideoFrame | LibAVPolyfill.VideoFrame, destination: VideoEncoder) {
+    static encodeVideo(data: VideoFrame | LibAVPolyfill.VideoFrame, destination: VideoEncoder) {
+        const hasVideoFrame = 'VideoFrame' in window;
+        const isPolyfilled = hasVideoFrame && VideoFrame === LibAVPolyfill.VideoFrame;
+
         if (destination instanceof LibAVPolyfill.VideoEncoder) {
-            if ('VideoFrame' in window && data instanceof VideoFrame) {
+            if (hasVideoFrame && !isPolyfilled && data instanceof VideoFrame) {
                 const converted = LibAVPolyfill.VideoFrame.fromNative(data);
                 data.close();
                 data = converted;
