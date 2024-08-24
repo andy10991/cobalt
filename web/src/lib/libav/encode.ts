@@ -4,6 +4,10 @@ import * as LibAVWebCodecs from "@imput/libavjs-webcodecs-bridge";
 import { BufferStream } from "../buffer-stream";
 import WebCodecsWrapper from "./webcodecs";
 import LibAVWrapper from "./instance";
+import {
+    EncodedAudioChunk as PolyfilledEncodedAudioChunk,
+    EncodedVideoChunk as PolyfilledEncodedVideoChunk
+} from "@imput/libavjs-webcodecs-polyfill";
 
 const QUEUE_THRESHOLD_MIN = 16;
 const QUEUE_THRESHOLD_MAX = 128;
@@ -53,7 +57,7 @@ export default class EncodeLibAV extends LibAVWrapper {
                 const {
                     pipe,
                     stream: ostream
-                } = await this.#createEncoder(stream, 'mp3');
+                } = await this.#createEncoder(stream, 'flac');
 
                 pipes.push({
                     decoder: await this.#createDecoder(stream),
@@ -267,14 +271,25 @@ export default class EncodeLibAV extends LibAVWrapper {
     }
 
     #decodePacket(decoder: Decoder, packet: Packet, stream: Stream) {
-        let chunk;
-        if (WebCodecsWrapper.isVideo(decoder)) {
-            chunk = LibAVWebCodecs.packetToEncodedVideoChunk(packet, stream);
-        } else if (WebCodecsWrapper.isAudio(decoder)) {
-            chunk = LibAVWebCodecs.packetToEncodedAudioChunk(packet, stream);
-        }
+        let decoderType;
 
-        decoder.decode(chunk);
+        if (decoderType = WebCodecsWrapper.isVideo(decoder)) {
+            const EncodedVideoChunk = decoderType === 'polyfilled' ? PolyfilledEncodedVideoChunk : window.EncodedVideoChunk;
+            WebCodecsWrapper.decodeVideo(
+                LibAVWebCodecs.packetToEncodedVideoChunk(
+                    packet, stream, { EncodedVideoChunk }
+                ),
+                decoder as VideoDecoder
+            );
+        } else if (decoderType = WebCodecsWrapper.isAudio(decoder)) {
+            const EncodedAudioChunk = decoderType === 'polyfilled' ? PolyfilledEncodedAudioChunk : window.EncodedAudioChunk;
+            WebCodecsWrapper.decodeAudio(
+                LibAVWebCodecs.packetToEncodedAudioChunk(
+                    packet, stream, { EncodedAudioChunk }
+                ),
+                decoder as AudioDecoder,
+            );
+        }
     }
 
     async* #demux(fmt_ctx: number) {

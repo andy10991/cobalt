@@ -139,25 +139,90 @@ export default class WebCodecsWrapper {
     }
 
     static isVideo(obj: unknown) {
-        return ('VideoEncoder' in window && obj instanceof VideoEncoder)
-                || ('VideoDecoder' in window && obj instanceof VideoDecoder)
-                || ('VideoFrame' in window && obj instanceof VideoFrame)
-                || ('EncodedVideoChunk' in window && obj instanceof EncodedVideoChunk)
-                || obj instanceof LibAVPolyfill.VideoEncoder
-                || obj instanceof LibAVPolyfill.VideoDecoder
-                || obj instanceof LibAVPolyfill.VideoFrame
-                || obj instanceof LibAVPolyfill.EncodedVideoChunk;
+        const isNative = ('VideoEncoder' in window && obj instanceof VideoEncoder)
+                            || ('VideoDecoder' in window && obj instanceof VideoDecoder)
+                            || ('VideoFrame' in window && obj instanceof VideoFrame)
+                            || ('EncodedVideoChunk' in window && obj instanceof EncodedVideoChunk);
+        if (isNative) {
+            return 'native';
+        }
+
+        const isPolyfilled = obj instanceof LibAVPolyfill.VideoEncoder
+                            || obj instanceof LibAVPolyfill.VideoDecoder
+                            || obj instanceof LibAVPolyfill.VideoFrame
+                            || obj instanceof LibAVPolyfill.EncodedVideoChunk;
+        if (isPolyfilled) {
+            return 'polyfilled';
+        }
     }
 
     static isAudio(obj: unknown) {
-        return ('AudioEncoder' in window && obj instanceof AudioEncoder)
-                || ('AudioDecoder' in window && obj instanceof AudioDecoder)
-                || ('AudioData' in window && obj instanceof AudioData)
-                || ('EncodedAudioChunk' in window && obj instanceof EncodedAudioChunk)
-                || obj instanceof LibAVPolyfill.AudioEncoder
-                || obj instanceof LibAVPolyfill.AudioDecoder
-                || obj instanceof LibAVPolyfill.AudioData
-                || obj instanceof LibAVPolyfill.EncodedAudioChunk;
+        const isNative = ('AudioEncoder' in window && obj instanceof AudioEncoder)
+                        || ('AudioDecoder' in window && obj instanceof AudioDecoder)
+                        || ('AudioData' in window && obj instanceof AudioData)
+                        || ('EncodedAudioChunk' in window && obj instanceof EncodedAudioChunk);
+
+        if (isNative) {
+            return 'native';
+        }
+
+        const isPolyfilled = obj instanceof LibAVPolyfill.AudioEncoder
+                            || obj instanceof LibAVPolyfill.AudioDecoder
+                            || obj instanceof LibAVPolyfill.AudioData
+                            || obj instanceof LibAVPolyfill.EncodedAudioChunk;
+        if (isPolyfilled) {
+            return 'polyfilled';
+        }
+    }
+
+    static decodeAudio(
+        data: EncodedAudioChunk | LibAVPolyfill.EncodedAudioChunk,
+        destination: AudioDecoder
+    ) {
+        const hasChunk = 'EncodedAudioChunk' in window
+        const isPolyfilled = hasChunk && window.EncodedAudioChunk === LibAVPolyfill.EncodedAudioChunk;
+        if (destination instanceof LibAVPolyfill.AudioDecoder) {
+            if (hasChunk && !isPolyfilled && data instanceof EncodedAudioChunk) {
+                data = LibAVPolyfill.EncodedAudioChunk.fromNative(data);
+                console.log('EncodedAudioChunk: native -> polyfill');
+            } else {
+                console.log('EncodedAudioChunk: passthrough (polyfill)');
+            }
+        } else {
+            if (data instanceof LibAVPolyfill.EncodedAudioChunk) {
+                data = data.toNative();
+                console.log('EncodedAudioChunk: polyfill -> native');
+            } else {
+                console.log('EncodedAudioChunk: passthrough (native)');
+            }
+        }
+
+        return destination.decode(data);
+    }
+
+    static decodeVideo(
+        data: EncodedVideoChunk | LibAVPolyfill.EncodedVideoChunk,
+        destination: VideoDecoder
+    ) {
+        const hasChunk = 'EncodedVideoChunk' in window
+        const isPolyfilled = hasChunk && window.EncodedVideoChunk === LibAVPolyfill.EncodedVideoChunk;
+        if (destination instanceof LibAVPolyfill.VideoDecoder) {
+            if (hasChunk && !isPolyfilled && data instanceof EncodedVideoChunk) {
+                data = LibAVPolyfill.EncodedVideoChunk.fromNative(data);
+                console.log('EncodedVideoChunk: native -> polyfill');
+            } else {
+                console.log('EncodedVideoChunk: passthrough (polyfill)');
+            }
+        } else {
+            if (data instanceof LibAVPolyfill.EncodedVideoChunk) {
+                data = data.toNative();
+                console.log('EncodedVideoChunk: polyfill -> native');
+            } else {
+                console.log('EncodedVideoChunk: passthrough (native)');
+            }
+        }
+
+        return destination.decode(data);
     }
 
     static encodeAudio(data: AudioData | LibAVPolyfill.AudioData, destination: AudioEncoder) {
