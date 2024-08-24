@@ -52,7 +52,7 @@
         "@imput/libav.js-encode-cli": "^5.7.6",
         "@imput/libav.js-remux-cli": "^5.7.6",
         "@imput/libavjs-webcodecs-bridge": "^0.1.2",
-        "@imput/libavjs-webcodecs-polyfill": "^0.5.2",
+        "@imput/libavjs-webcodecs-polyfill": "^0.5.4",
         "@imput/version-info": "workspace:^",
         "@tabler/icons-svelte": "3.6.0",
         "@vitejs/plugin-basic-ssl": "^1.1.0",

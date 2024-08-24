@@ -101,8 +101,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2
       '@imput/libavjs-webcodecs-polyfill':
-        specifier: ^0.5.2
-        version: 0.5.2
+        specifier: ^0.5.4
+        version: 0.5.4
       '@imput/version-info':
         specifier: workspace:^
         version: link:../packages/version-info
@@ -547,8 +547,8 @@ packages:
   '@imput/libavjs-webcodecs-bridge@0.1.2':
     resolution: {integrity: sha512-8QVvCe9CRe3oVGpMrx/RtHmPunrK+I52nUImM/FDbOt13nEq0rd+zu5ADIMOw7rq/8OgLqqf/o1yQ+Sa4/mhSw==}
 
-  '@imput/libavjs-webcodecs-polyfill@0.5.2':
-    resolution: {integrity: sha512-3wyRFUTV7yJyYNJvSKzoZWNnGbSN/5RVj+Xx9vYH8/xt73TLpXBBqotGc7UiHNeSy6eFO0EjUzAmieBa+YjLrQ==}
+  '@imput/libavjs-webcodecs-polyfill@0.5.4':
+    resolution: {integrity: sha512-1YCPCSHv4qns9CnZ0nQp9smohwRbPnzTf95AA9EpYe79vLLubJ+c91IDalfOaI3XPue0wynhCStXGJqS4ng55A==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -2524,7 +2524,7 @@ snapshots:
 
   '@imput/libavjs-webcodecs-bridge@0.1.2': {}
 
-  '@imput/libavjs-webcodecs-polyfill@0.5.2':
+  '@imput/libavjs-webcodecs-polyfill@0.5.4':
     dependencies:
       '@ungap/global-this': 0.4.4
 
