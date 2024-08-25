@@ -13,7 +13,7 @@ const QUEUE_THRESHOLD_MIN = 16;
 const QUEUE_THRESHOLD_MAX = 128;
 
 export default class EncodeLibAV extends LibAVWrapper {
-    webcodecs: WebCodecsWrapper | null = null;
+    #webcodecs: WebCodecsWrapper | null = null;
 
     constructor() {
         super(LibAV);
@@ -21,8 +21,8 @@ export default class EncodeLibAV extends LibAVWrapper {
 
     async init() {
         await super.init();
-        if (!this.webcodecs) {
-            this.webcodecs = new WebCodecsWrapper(
+        if (!this.#webcodecs) {
+            this.#webcodecs = new WebCodecsWrapper(
                 super.get().then(({ libav }) => libav)
             );
         }
@@ -31,7 +31,7 @@ export default class EncodeLibAV extends LibAVWrapper {
     async #get() {
         return {
             ...await super.get(),
-            webcodecs: this.webcodecs!
+            webcodecs: this.#webcodecs!
         };
     }
 
@@ -47,17 +47,10 @@ export default class EncodeLibAV extends LibAVWrapper {
             const pipes: RenderingPipeline[] = [];
             const output_streams: OutputStream[] = [];
             for (const stream of streams) {
-                // FIXME: support images.
-                if (stream.codec_id === 61 || stream.codec_id === 62) {
-                    pipes.push(null);
-                    output_streams.push(null);
-                    continue;
-                }
-
                 const {
                     pipe,
                     stream: ostream
-                } = await this.#createEncoder(stream, 'flac');
+                } = await this.#createEncoder(stream, 'mp4a.40.02');
 
                 pipes.push({
                     decoder: await this.#createDecoder(stream),
@@ -257,7 +250,11 @@ export default class EncodeLibAV extends LibAVWrapper {
                 { type: "video/mp4" }
             );
 
-            window.open(URL.createObjectURL(renderBlob), '_blank');
+            const url = URL.createObjectURL(renderBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'output.mp4';
+            a.click();
         } finally {
             try {
                 await libav.unlink('output.mp4');
@@ -329,6 +326,7 @@ export default class EncodeLibAV extends LibAVWrapper {
             streamToConfig = LibAVWebCodecs.videoStreamToConfig;
             configToStream = LibAVWebCodecs.configToVideoStream;
             initEncoder = webcodecs.initVideoEncoder.bind(webcodecs);
+            codec = 'hvc1.1.6.L123.B0'
         } else if (stream.codec_type === libav.AVMEDIA_TYPE_AUDIO) {
             streamToConfig = LibAVWebCodecs.audioStreamToConfig;
             configToStream = LibAVWebCodecs.configToAudioStream;
