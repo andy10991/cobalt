@@ -34,32 +34,38 @@ export type Encoder = VideoEncoder | AudioEncoder;
 export type ChunkMetadata = EncodedVideoChunkMetadata | EncodedAudioChunkMetadata;
 export type Chunk = EncodedVideoChunk | EncodedAudioChunk;
 
-export type AudioPipeline = {
-    decoder: {
-        instance: AudioDecoder,
-        output: BufferStream<AudioData>
-    },
-    encoder: {
-        instance: AudioEncoder,
-        output: BufferStream<{
-            chunk: EncodedAudioChunk,
-            metadata: EncodedAudioChunkMetadata
-        }>
+export type PipelineComponent<Transformer, Output> = {
+    instance: Transformer,
+    output: BufferStream<Output>
+};
+
+export type AudioDecoderPipeline = PipelineComponent<AudioDecoder, AudioData>;
+export type VideoDecoderPipeline = PipelineComponent<VideoDecoder, VideoFrame>;
+
+export type AudioEncoderPipeline = PipelineComponent<
+    AudioEncoder,
+    {
+        chunk: EncodedAudioChunk,
+        metadata: EncodedAudioChunkMetadata
     }
+>;
+
+export type VideoEncoderPipeline = PipelineComponent<
+    VideoEncoder,
+    {
+        chunk: EncodedVideoChunk,
+        metadata: EncodedVideoChunkMetadata
+    }
+>;
+
+export type AudioPipeline = {
+    decoder: AudioDecoderPipeline,
+    encoder: AudioEncoderPipeline
 };
 
 export type VideoPipeline = {
-    decoder: {
-        instance: VideoDecoder,
-        output: BufferStream<VideoFrame>
-    },
-    encoder: {
-        instance: VideoEncoder,
-        output: BufferStream<{
-            chunk: EncodedVideoChunk,
-            metadata: EncodedVideoChunkMetadata
-        }>
-    }
+    decoder: VideoDecoderPipeline,
+    encoder: VideoEncoderPipeline
 }
 
 export type Pipeline = AudioPipeline | VideoPipeline;
