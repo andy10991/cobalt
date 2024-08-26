@@ -13,7 +13,7 @@ export default class WebCodecsWrapper {
         this.#libav = libav;
     }
 
-    async #load() {
+    async load() {
         if (typeof this.#ready === 'undefined') {
             this.#ready = LibAVPolyfill.load({
                 polyfill: true,
@@ -30,7 +30,7 @@ export default class WebCodecsWrapper {
             const audioConfig = config as AudioDecoderConfig;
             for (const source of [ window, LibAVPolyfill ]) {
                 if (source === LibAVPolyfill) {
-                    await this.#load();
+                    await this.load();
                 }
 
                 try {
@@ -45,7 +45,7 @@ export default class WebCodecsWrapper {
             const videoConfig = config as VideoDecoderConfig;
             for (const source of [ window, LibAVPolyfill ]) {
                 if (source === LibAVPolyfill) {
-                    await this.#load();
+                    await this.load();
                 }
 
                 try {
@@ -66,7 +66,7 @@ export default class WebCodecsWrapper {
             const audioConfig = config as AudioEncoderConfig;
             for (const source of [ window, LibAVPolyfill ]) {
                 if (source === LibAVPolyfill) {
-                    await this.#load();
+                    await this.load();
                 }
 
                 try {
@@ -81,7 +81,7 @@ export default class WebCodecsWrapper {
             const videoConfig = config as VideoEncoderConfig;
             for (const source of [ window, LibAVPolyfill ]) {
                 if (source === LibAVPolyfill) {
-                    await this.#load();
+                    await this.load();
                 }
 
                 try {

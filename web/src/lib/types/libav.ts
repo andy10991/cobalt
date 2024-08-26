@@ -1,4 +1,5 @@
 import { BufferStream } from "$lib/buffer-stream";
+import type { ProbeResult } from "$lib/libav/probe";
 
 export type InputFileKind = "video" | "audio";
 
@@ -69,5 +70,17 @@ export type VideoPipeline = {
 }
 
 export type Pipeline = AudioPipeline | VideoPipeline;
+export type DecoderPipeline = AudioDecoderPipeline | VideoDecoderPipeline | null;
+export type EncoderPipeline = AudioEncoderPipeline | VideoEncoderPipeline | null;
 export type RenderingPipeline = Pipeline | null;
 export type OutputStream = [number, number, number] | null;
+export type ContainerConfiguration = {
+    formatName: string
+};
+
+export type StreamInfo = {
+    codec: string,
+    type: string,
+    supported: boolean,
+    output: ProbeResult
+};

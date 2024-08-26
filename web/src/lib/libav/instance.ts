@@ -23,6 +23,13 @@ export default class LibAVWrapper {
         }
     }
 
+    async shutdown() {
+        if (this.#libav) {
+            (await this.#libav).terminate();
+            this.#libav = null;
+        }
+    }
+
     protected async get() {
         if (!this.#libav) throw new Error("LibAV wasn't initialized");
 
@@ -33,7 +40,7 @@ export default class LibAVWrapper {
 
     static getExtensionFromType(blob: Blob) {
         const extensions = mime.getAllExtensions(blob.type);
-        const overrides = ['mp3', 'mov'];
+        const overrides = ['mp3', 'mov', 'opus'];
 
         if (!extensions)
             return;
