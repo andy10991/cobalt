@@ -1,5 +1,6 @@
 import { BufferStream } from "$lib/buffer-stream";
 import type { ProbeResult } from "$lib/libav/probe";
+import type { Packet } from "@imput/libav.js-encode-cli";
 
 export type InputFileKind = "video" | "audio";
 
@@ -69,10 +70,15 @@ export type VideoPipeline = {
     encoder: VideoEncoderPipeline
 }
 
+export type PassthroughPipe = {
+    type: "passthrough",
+    output: BufferStream<Packet>
+};
+
 export type Pipeline = AudioPipeline | VideoPipeline;
 export type DecoderPipeline = AudioDecoderPipeline | VideoDecoderPipeline | null;
 export type EncoderPipeline = AudioEncoderPipeline | VideoEncoderPipeline | null;
-export type RenderingPipeline = Pipeline | null;
+export type RenderingPipeline = PassthroughPipe | Pipeline | null;
 export type OutputStream = [number, number, number] | null;
 export type ContainerConfiguration = {
     formatName: string

@@ -28,20 +28,18 @@
             if (!stream.supported) continue;
 
             const maybe_codec = Object.values(stream.output).find(a => a.supported && !a.slow);
-            if (!maybe_codec || !maybe_codec.supported)
-                throw "could not find valid codec";
+            if (maybe_codec && maybe_codec.supported) {
+                const decoderConfig = await ff.streamIndexToConfig(+stream_index);
+                const config = {
+                    ...decoderConfig,
+                    width: 'codedWidth' in decoderConfig ? decoderConfig.codedWidth : undefined,
+                    height: 'codedHeight' in decoderConfig ? decoderConfig.codedHeight : undefined,
+                };
 
-            const decoderConfig = await ff.streamIndexToConfig(+stream_index);
-            const config = {
-                ...decoderConfig,
-                width: 'codedWidth' in decoderConfig ? decoderConfig.codedWidth : undefined,
-                height: 'codedHeight' in decoderConfig ? decoderConfig.codedHeight : undefined,
-            };
-
-            await ff.configureEncoder(+stream_index, {
-                ...config,
-                codec: maybe_codec.codec
-            });
+                await ff.configureEncoder(+stream_index, config);
+            } else {
+                await ff.configureEncoder(+stream_index, 'passthrough');
+            }
         }
 
         const blob = new Blob(

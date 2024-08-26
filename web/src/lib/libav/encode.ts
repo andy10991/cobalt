@@ -24,6 +24,7 @@ export default class EncodeLibAV extends LibAVWrapper {
 
     #encoders?: EncoderPipeline[];
     #ostreams?: OutputStream[];
+    #passthrough?: (BufferStream<Packet> | null)[];
 
     constructor() {
         super(LibAV);
@@ -106,9 +107,10 @@ export default class EncodeLibAV extends LibAVWrapper {
             throw "decoders are already set up";
         }
 
-        this.#decoders = Array(this.#istreams.length).fill(null);
-        this.#encoders = Array(this.#istreams.length).fill(null);
-        this.#ostreams = Array(this.#istreams.length).fill(null);
+        this.#decoders    = Array(this.#istreams.length).fill(null);
+        this.#encoders    = Array(this.#istreams.length).fill(null);
+        this.#ostreams    = Array(this.#istreams.length).fill(null);
+        this.#passthrough = Array(this.#istreams.length).fill(null);
 
         for (const idx in this.#istreams) {
             try {
@@ -165,16 +167,24 @@ export default class EncodeLibAV extends LibAVWrapper {
         ));
     }
 
-    async configureEncoder(index: number, config: AudioEncoderConfig | VideoEncoderConfig | null) {
+    async configureEncoder(index: number, config: AudioEncoderConfig | VideoEncoderConfig | "passthrough" | null) {
         if (!this.#istreams || !this.#ostreams || !this.#istreams[index])
             throw "stream does not exist or streams are not configured"
-        else if (!this.#encoders)
+        else if (!this.#encoders || !this.#passthrough)
             throw "decoders have not been set up yet";
 
         const { libav, webcodecs } = await this.#get();
         const stream = this.#istreams[index];
 
         let configToStream, initEncoder;
+
+        if (config === 'passthrough') {
+            this.#passthrough[index] = new BufferStream();
+            this.#ostreams[index] = [ stream.codecpar, stream.time_base_num, stream.time_base_den ];
+            return true;
+        } else {
+            this.#passthrough[index] = null;
+        }
 
         if (this.#encoders[index]) {
             await this.#encoders[index].instance.flush();
@@ -221,8 +231,14 @@ export default class EncodeLibAV extends LibAVWrapper {
 
         const pipes: RenderingPipeline[] = Array(this.#decoders.length).fill(null);
         for (let i = 0; i < this.#encoders.length; ++i) {
-            if (this.#encoders[i] === null) continue;
-            if (this.#decoders[i] === null) continue;
+            if (this.#passthrough && this.#passthrough[i] !== null) {
+                pipes[i] = {
+                    type: 'passthrough',
+                    output: this.#passthrough[i]!
+                };
+                continue;
+            } else if (this.#encoders[i] === null) continue;
+            else if (this.#decoders[i] === null) continue;
 
             pipes[i] = {
                 encoder: this.#encoders[i],
@@ -243,9 +259,14 @@ export default class EncodeLibAV extends LibAVWrapper {
         if (!this.#istreams) throw "istreams are not set up";
 
         for await (const { index, packet } of this.#demux()) {
-            if (pipes[index] === null) continue;
+            if (pipes[index] === null) {
+                continue;
+            } else if ('type' in pipes[index] && pipes[index].type === 'passthrough') {
+                pipes[index].output.push(packet);
+                continue;
+            }
 
-            const { decoder } = pipes[index];
+            const { decoder } = pipes[index] as Pipeline;
 
             this.#decodePacket(decoder.instance, packet, this.#istreams[index]);
 
@@ -265,9 +286,14 @@ export default class EncodeLibAV extends LibAVWrapper {
 
         for (const pipe of pipes) {
             if (pipe !== null) {
-                await pipe.decoder.instance.flush();
-                pipe.decoder.instance.close();
-                pipe.decoder.output.push(null);
+                if ('type' in pipe && pipe.type === 'passthrough') {
+                    pipe.output.push(null);
+                } else {
+                    const _pipe = pipe as Pipeline;
+                    await _pipe.decoder.instance.flush();
+                    _pipe.decoder.instance.close();
+                    _pipe.decoder.output.push(null);
+                }
             }
         }
     }
@@ -320,7 +346,8 @@ export default class EncodeLibAV extends LibAVWrapper {
     async #encodeStreams(pipes: RenderingPipeline[]) {
         return Promise.all(
             pipes
-            .filter(p => p !== null)
+            .filter(p => p !== null && !('type' in p && p.type === 'passthrough'))
+            .map(p => p as Pipeline)
             .map(
                 ({ decoder, encoder }) => {
                     return this.#encodeStream(decoder.output, encoder);
@@ -356,14 +383,21 @@ export default class EncodeLibAV extends LibAVWrapper {
             const starterPackets = [], readers: ReadableStreamDefaultReader[] = [];
 
             for (let i = 0; i < ostreams.length; ++i) {
-                if (pipes[i] === null) continue;
-                readers[i] = pipes[i]!.encoder.output.getReader();
+                const pipe = pipes[i];
+                if (pipe === null) continue;
+                const isPassthrough = 'type' in pipe && pipe.type === 'passthrough';
+
+                if (isPassthrough) {
+                    readers[i] = pipe.output.getReader();
+                } else {
+                    readers[i] = (pipe as Pipeline).encoder.output.getReader();
+                }
 
                 const { done, value } = await readers[i].read();
                 if (done) throw "this should not happen";
 
                 starterPackets.push(
-                    await this.#processChunk(value, ostreams[i], i)
+                    isPassthrough ? value : await this.#processChunk(value, ostreams[i], i)
                 );
             }
 
@@ -398,13 +432,14 @@ export default class EncodeLibAV extends LibAVWrapper {
                 if (pipe === null) {
                     return;
                 }
+                const isPassthrough = 'type' in pipe && pipe.type === 'passthrough';
 
                 while (true) {
                     const { done, value } = await readers[i].read();
                     if (done) break;
 
                     writePromise = writePromise.then(async () => {
-                        const packet = await this.#processChunk(value, ostreams[i], i);
+                        const packet = isPassthrough ? value : await this.#processChunk(value, ostreams[i], i);
                         await libav.ff_write_multi(output_ctx, write_pkt, [ packet ]);
                     });
                 }
