@@ -2,11 +2,13 @@
     import LibAVWrapper from "$lib/libav/remux";
     import { openURL } from "$lib/download";
     import { t } from "$lib/i18n/translations";
+    import { createDialog } from "$lib/dialogs";
 
     import DropReceiver from "$components/misc/DropReceiver.svelte";
     import FileReceiver from "$components/misc/FileReceiver.svelte";
-    import { createDialog } from "$lib/dialogs";
+
     import mime from "mime";
+    import { onDestroy } from "svelte";
 
     let draggedOver = false;
     let file: File | Blob | undefined;
@@ -64,6 +66,7 @@
                     ],
                 });
             }
+            console.log(file_info)
 
             totalDuration = Number(file_info.format.duration);
 
@@ -93,6 +96,8 @@
     $: if (file) {
         render();
     }
+
+    onDestroy(() => ff.shutdown());
 </script>
 
 <svelte:head>

@@ -4,6 +4,7 @@
 
     import DropReceiver from "$components/misc/DropReceiver.svelte";
     import FileReceiver from "$components/misc/FileReceiver.svelte";
+    import { onDestroy } from "svelte";
 
     let file: File | undefined;
 
@@ -13,8 +14,11 @@
     const render = async () => {
         if (!file) return;
         await ff.init();
-        await ff.transcode(file);
-    };
+
+    onDestroy(async () => {
+        await ff.cleanup();
+        ff.shutdown();
+    });
 
     $: if (file) {
         render();
