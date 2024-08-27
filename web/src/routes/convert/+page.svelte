@@ -34,6 +34,7 @@
                     ...decoderConfig,
                     width: 'codedWidth' in decoderConfig ? decoderConfig.codedWidth : undefined,
                     height: 'codedHeight' in decoderConfig ? decoderConfig.codedHeight : undefined,
+                    codec: maybe_codec.codec
                 };
 
                 await ff.configureEncoder(+stream_index, config);
