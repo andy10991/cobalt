@@ -79,6 +79,9 @@ export default class EncodeLibAV extends LibAVWrapper {
             }
             this.#decoders = undefined;
         }
+
+        this.#ostreams = undefined;
+        this.#passthrough = undefined;
     }
 
     async feed(blob: Blob) {
@@ -373,7 +376,11 @@ export default class EncodeLibAV extends LibAVWrapper {
     async #mux(pipes: RenderingPipeline[], format_name: string) {
         if (!this.#ostreams) throw "ostreams not configured";
 
-        const ostreams = this.#ostreams;
+        const ostreams = this.#ostreams.filter(a => a !== null);
+        const ostream_map = this.#ostreams.map(
+            a => a === null ? null : ostreams.indexOf(a)
+        );
+
         const { libav } = await this.#get();
         const write_pkt = await libav.av_packet_alloc();
 
@@ -382,7 +389,7 @@ export default class EncodeLibAV extends LibAVWrapper {
         try {
             const starterPackets = [], readers: ReadableStreamDefaultReader[] = [];
 
-            for (let i = 0; i < ostreams.length; ++i) {
+            for (let i = 0; i < pipes.length; ++i) {
                 const pipe = pipes[i];
                 if (pipe === null) continue;
                 const isPassthrough = 'type' in pipe && pipe.type === 'passthrough';
@@ -397,7 +404,7 @@ export default class EncodeLibAV extends LibAVWrapper {
                 if (done) throw "this should not happen";
 
                 starterPackets.push(
-                    isPassthrough ? value : await this.#processChunk(value, ostreams[i], i)
+                    isPassthrough ? value : await this.#processChunk(value, this.#ostreams[i], ostream_map[i]!)
                 );
             }
 
@@ -421,7 +428,7 @@ export default class EncodeLibAV extends LibAVWrapper {
                     device: true,
                     open: true,
                     codecpars: true
-                }, this.#ostreams.filter(a => a !== null)
+                }, ostreams
             );
 
             await libav.avformat_write_header(output_ctx, 0);
@@ -439,7 +446,12 @@ export default class EncodeLibAV extends LibAVWrapper {
                     if (done) break;
 
                     writePromise = writePromise.then(async () => {
-                        const packet = isPassthrough ? value : await this.#processChunk(value, ostreams[i], i);
+                        let packet;
+                        if (isPassthrough) {
+                            packet = value;
+                        } else {
+                            packet = await this.#processChunk(value, this.#ostreams![i], ostream_map[i]!);
+                        }
                         await libav.ff_write_multi(output_ctx, write_pkt, [ packet ]);
                     });
                 }
